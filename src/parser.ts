@@ -1,68 +1,74 @@
-import { Relation } from './types';
 import { db } from './database';
+import { Relation } from './types';
 
 export class PromptParser {
   parse(prompt: string): { success: boolean; message: string; relation?: Relation } {
-    // Modifié pour prendre en charge les mots composés avec des tirets
-    const segments = prompt.toLowerCase().trim().split(/\s+/);
-    
-    // Combiner les segments avec des tirets en un seul mot
-    const words: string[] = [];
-    let currentWord = '';
-    
-    for (const segment of segments) {
-      if (segment.endsWith('-')) {
-        // Si le segment se termine par un tiret, ajouter au mot en cours sans le tiret
-        currentWord += segment.slice(0, -1);
-      } else if (currentWord) {
-        // Compléter le mot composé
-        currentWord += segment;
-        words.push(currentWord);
-        currentWord = '';
-      } else {
-        // Mot normal
-        words.push(segment);
+    try {
+      // Simple regex-based parsing instead of Python script
+      const words = prompt.split(' ');
+      
+      if (words.length < 3) {
+        return {
+          success: false,
+          message: 'Prompt must have at least 3 words (subject, verb, object)'
+        };
       }
-    }
-    
-    // S'il reste un mot composé incomplet à la fin
-    if (currentWord) {
-      words.push(currentWord);
-    }
-    
-    if (words.length !== 3) {
+      
+      // Simple parsing: First word is subject, second is verb, rest is object
+      const subjectStr = words[0];
+      const verbStr = words[1];
+      const objectStr = words.slice(2).join(' ');
+      
+      // Create relation in database
+      const relation = this.createRelation(subjectStr, verbStr, objectStr);
+      
+      if (!relation) {
+        return {
+          success: false,
+          message: 'Failed to create relation'
+        };
+      }
+      
+      return {
+        success: true,
+        message: `Created relation: ${subjectStr} ${verbStr} ${objectStr}`,
+        relation
+      };
+    } catch (error: any) {
       return {
         success: false,
-        message: "Prompt must be in format: 'subject verb object'. Use hyphens to join multi-word components (e.g., 'I want-to sleep')."
+        message: `Error parsing prompt: ${error.message}`
       };
     }
+  }
 
-    const [subjectStr, verbStr, objectStr] = words;
-
-    // Find or create subject (assumed to be a person)
-    const subject = db.findOrCreateName(subjectStr, "person");
-    const subjectInstance = db.getActiveInstanceForName(subject.id);
-
-    // Find or create verb
-    const verb = db.findOrCreateVerb(verbStr);
-
-    // Find or create object (assumed to be a thing)
-    const object = db.findOrCreateName(objectStr, "thing");
-    const objectInstance = db.getActiveInstanceForName(object.id);
-
-    // Create new relation with instance IDs
-    const relation = db.addRelation(
-      subject.id, 
-      verb.id, 
-      object.id, 
-      subjectInstance?.id, 
-      objectInstance?.id
-    );
-
-    return {
-      success: true,
-      message: `Successfully added relation: ${subjectStr} ${verbStr} ${objectStr}`,
-      relation
-    };
+  // Helper method to create a relation from string inputs
+  createRelation(subjectStr: string, verbStr: string, objectStr: string): Relation | null {
+    try {
+      // Find or create subject name and get active instance
+      const subjectName = db.findOrCreateName(subjectStr, 'entity');
+      const subjectInstance = db.getActiveInstanceForName(subjectName.id);
+      
+      // Find or create verb
+      const verb = db.findOrCreateVerb(verbStr);
+      
+      // Find or create object name and get active instance
+      const objectName = db.findOrCreateName(objectStr, 'entity');
+      const objectInstance = db.getActiveInstanceForName(objectName.id);
+      
+      // Create the relation
+      const relation = db.addRelation(
+        subjectName.id,
+        verb.id,
+        objectName.id,
+        subjectInstance?.id,
+        objectInstance?.id
+      );
+      
+      return relation;
+    } catch (error) {
+      console.error('Error creating relation:', error);
+      return null;
+    }
   }
 }

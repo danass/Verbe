@@ -590,6 +590,9 @@ class DatabaseManager {
     subjectInstance?: Instance;
     objectInstance?: Instance;
     timestamp: string;
+    timeType?: string;
+    frequency?: string;
+    customTime?: string;
   }> {
     return this.data.relations.map(relation => {
       const subject = this.data.names.find(n => n.id === relation.subject_id);
@@ -607,7 +610,10 @@ class DatabaseManager {
         object: object?.name || 'Unknown',
         subjectInstance,
         objectInstance,
-        timestamp: relation.timestamp
+        timestamp: relation.timestamp,
+        timeType: relation.timeType,
+        frequency: relation.frequency,
+        customTime: relation.customTime
       };
     }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
@@ -674,6 +680,31 @@ class DatabaseManager {
   
   getRelationCountForVerb(verbId: number): number {
     return this.data.relations.filter(r => r.verb_id === verbId).length;
+  }
+
+  updateRelationTime(relationId: number, updates: { 
+    timeType?: string;
+    frequency?: string;
+    customTime?: string;
+  }): boolean {
+    const relation = this.data.relations.find(r => r.id === relationId);
+    if (!relation) return false;
+    
+    // Update relation fields
+    if (updates.timeType) {
+      relation.timeType = updates.timeType as any;
+    }
+    
+    if (updates.frequency) {
+      relation.frequency = updates.frequency as any;
+    }
+    
+    if (updates.customTime) {
+      relation.customTime = updates.customTime;
+    }
+    
+    this.updateDatabase();
+    return true;
   }
 }
 

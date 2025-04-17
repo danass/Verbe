@@ -28,6 +28,9 @@ export interface Verb {
   };
 }
 
+export type TimeType = 'specific' | 'general' | 'recurring';
+export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'occasionally' | 'rarely' | 'frequently';
+
 export interface Relation {
   id: number;
   subject_id: number;
@@ -36,6 +39,9 @@ export interface Relation {
   subject_instance_id?: number;
   object_instance_id?: number;
   timestamp: string;
+  timeType?: TimeType;
+  frequency?: Frequency;
+  customTime?: string;
 }
 
 export interface Database {
@@ -60,6 +66,9 @@ export interface TimelineData {
   verb: string;
   object: string;
   relationId: number;
+  timeType?: TimeType;
+  frequency?: Frequency;
+  customTime?: string;
 }
 
 export interface EntityTreeNode {
